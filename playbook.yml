@@ -1,0 +1,64 @@
+---
+- hosts: all
+  become: yes
+  become_user: root
+  properties:
+    sdkman_script_install_url: http://get.sdkman.io
+    sdkman_folder: '/home/vagrant/.sdkman'
+    gradle_version: 2.3
+  tasks:
+  - name: upgrade all packages
+    dnf:
+      name: "*"
+      state: latest
+  - name: install oracle jdk
+    dnf:
+      name: "java-1.8.0-openjdk-devel"
+      state: present
+  - name: add docker testing repo
+    yum_repository:
+      name: docker-testing
+      description: docker testing repo
+      baseurl: https://yum.dockerproject.org/repo/testing/fedora/$releasever/
+      enabled: no
+      gpgcheck: yes
+      gpgkey: https://yum.dockerproject.org/gpg
+  - name: install docker
+    dnf:
+      name: docker-engine
+      state: present
+      enablerepo: docker-testing
+  - name: enable docker service
+    service:
+      name: docker
+      state: started
+      enabled: yes
+  - name: git
+    dnf:
+      name: git-all
+      state: present
+  - name: nano
+    dnf:
+      name: nano
+      state: present
+  - name: vim
+    dnf:
+      name: vim
+      state: present
+  - name: Check if sdkman is installed
+    shell: test -d {{sdkman_folder}} && echo "yes" || echo "no"
+    register: is_sdkman_installed
+  - name: Install SDKMAN!
+    when: is_sdkman_installed.stdout == "no"
+    shell: curl -s {{sdkman_script_install_url}} | bash executable=/bin/bash
+    sudo: no
+  - name: Ensure presence of bashrc
+    file: state=touch path={{user_home_path}}/.bashrc
+    sudo: no
+  - name: Add sdkman in .bashrc
+    lineinfile: dest={{user_home_path}}/.bashrc regexp="\/.sdkman/bin\/sdkman\-init\.sh" line='[[ -s "{{sdkman_folder}}/bin/sdkman-init.sh" && ! $(which sdkman-init.sh) ]] && source "{{sdkman_folder}}/bin/sdkman-init.sh"'
+    sudo: no
+  - name: Installing gradle
+    # This will read your bash profile file, which would setup sdkman-init.sh.
+    command: bash -lc "sdk install gradle {{gradle_version}}"
+    sudo: no
