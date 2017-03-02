@@ -5,7 +5,9 @@
   vars:
     sdkman_script_install_url: http://get.sdkman.io
     sdkman_folder: '/home/vagrant/.sdkman'
-    gradle_version: 2.3
+    user_home_path: '/home/vagrant'
+    gradle_version: 3.4
+    grails_version: 2.5.5
 
   tasks:
   - name: upgrade all packages
@@ -49,17 +51,42 @@
   - name: Check if sdkman is installed
     shell: test -d {{sdkman_folder}} && echo "yes" || echo "no"
     register: is_sdkman_installed
+  - name: unzip
+    dnf:
+      name: unzip
+      state: present
+  - name: zip
+    dnf:
+      name: zip
+      state: present      
+  - name: mlocate
+    dnf:
+      name: mlocate
+      state: present
+  - name: set sdkman installer permissions
+    file:
+      path: /vagrant/utils/sdkman-install.sh
+      owner: vagrant
+      group: vagrant
+      mode: 0755
   - name: Install SDKMAN!
     when: is_sdkman_installed.stdout == "no"
-    shell: curl -s {{sdkman_script_install_url}} | bash executable=/bin/bash
+    shell: /vagrant/utils/sdkman-install.sh
     become: no
   - name: Ensure presence of bashrc
     file: state=touch path={{user_home_path}}/.bashrc
     become: no
   - name: Add sdkman in .bashrc
-    lineinfile: dest={{user_home_path}}/.bashrc regexp="\/.sdkman/bin\/sdkman\-init\.sh" line='[[ -s "{{sdkman_folder}}/bin/sdkman-init.sh" && ! $(which sdkman-init.sh) ]] && source "{{sdkman_folder}}/bin/sdkman-init.sh"'
+    shell: echo "source {{sdkman_folder}}/bin/sdkman-init.sh" > {{user_home_path}}/.bashrc
+    become: no
+  - name: Execute sdkman init in current shell
+    shell: source {{sdkman_folder}}/bin/sdkman-init.sh
     become: no
   - name: Installing gradle
     # This will read your bash profile file, which would setup sdkman-init.sh.
     command: bash -lc "sdk install gradle {{gradle_version}}"
+    become: no
+  - name: Installing gradle
+    # This will read your bash profile file, which would setup sdkman-init.sh.
+    command: bash -lc "sdk install grails {{grails_version}}"
     become: no
