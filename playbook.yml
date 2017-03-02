@@ -2,10 +2,11 @@
 - hosts: all
   become: yes
   become_user: root
-  properties:
+  vars:
     sdkman_script_install_url: http://get.sdkman.io
     sdkman_folder: '/home/vagrant/.sdkman'
     gradle_version: 2.3
+
   tasks:
   - name: upgrade all packages
     dnf:
@@ -51,14 +52,14 @@
   - name: Install SDKMAN!
     when: is_sdkman_installed.stdout == "no"
     shell: curl -s {{sdkman_script_install_url}} | bash executable=/bin/bash
-    sudo: no
+    become: no
   - name: Ensure presence of bashrc
     file: state=touch path={{user_home_path}}/.bashrc
-    sudo: no
+    become: no
   - name: Add sdkman in .bashrc
     lineinfile: dest={{user_home_path}}/.bashrc regexp="\/.sdkman/bin\/sdkman\-init\.sh" line='[[ -s "{{sdkman_folder}}/bin/sdkman-init.sh" && ! $(which sdkman-init.sh) ]] && source "{{sdkman_folder}}/bin/sdkman-init.sh"'
-    sudo: no
+    become: no
   - name: Installing gradle
     # This will read your bash profile file, which would setup sdkman-init.sh.
     command: bash -lc "sdk install gradle {{gradle_version}}"
-    sudo: no
+    become: no
